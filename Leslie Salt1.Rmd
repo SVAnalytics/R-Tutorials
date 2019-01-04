@@ -1,0 +1,108 @@
+---
+title: "Leslie Salt"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load dataset
+
+```{r}
+setwd("C:/SUDHAHAR/Analytics/Great Learning/Assignments/Advanced Statistics")
+Salt <- readxl::read_excel("Dataset_LeslieSalt.xlsx")
+  
+```
+
+Load required libraries
+
+```{r}
+library(dlookr) #Exploratory Analysis
+library(psych)
+library(lmtest)
+library(ggplot2)
+library(corrplot)
+library(DAAG)
+```
+
+Lets glimpse through the dataset
+```{r}
+str(Salt)
+head(Salt)
+tail(Salt)
+```
+County and Flood are categorical variables but they are loaded as numbers in R. Lets change them into factor variables.
+```{r}
+Salt$County <- as.factor(Salt$County)
+Salt$Flood <- as.factor(Salt$Flood)
+str(Salt)
+```
+
+Summary Statistics
+```{r}
+describe(Salt)
+
+```
+Most of the variables are not normally distributed. Though it might impact the model performance, it is not necessary to transform the variables to normal.
+```{r}
+#check the correlation of continous variables
+corrplot(cor(Salt[,-c(2,7)]),method = "number",type = "upper")
+```
+Except "Distance" variable, all other continuous varaibaes have some lienar reationship with the target variable "Price". 
+Distance and Size have some strong lienar reationship, this might bring multicolliniarity issue to the model.
+
+Lets have a visul look at linear relationship of Size and Distance variables with target variable Price.
+```{r}
+p1 <- ggplot(Salt, aes(Size)) +
+  geom_histogram(fill="Blue")
+p2 <- ggplot(Salt, aes(x=Size, y=Price)) +
+  geom_point(color="Blue")
+
+gridExtra::grid.arrange(p1,p2, nrow=1)
+```
+
+Size varibale apprears to have few extreme variable that might impact model performance.
+
+```{r}
+p3 <- ggplot(Salt, aes(Distance)) +
+  geom_histogram(fill="Blue")
+p4 <- ggplot(Salt, aes(x=Distance, y=Price)) +
+  geom_point(color="Blue")
+
+gridExtra::grid.arrange(p3,p4, nrow=1)
+```
+Now lets run a linear model with all predictor variables.
+```{r}
+model1 <- lm(Price~.,data=Salt); model1
+summary(model1)
+anova(model1)
+
+```
+
+p-vaue of the regression model is very small, so model1 is significant.
+R-squared is 0.747 and Adjusted R-squared is 0.67. Hense, this model is able to explain 67% of total variance in the target variable.
+Looking at the p-value of independent variables Distance, Size and Date have higher p-value that means they add insignificant value to the model.
+We can remove these insignificant variables one at a time and try running new models to improve the performance.
+
+```{r}
+model2 <- lm(Price~.,data=Salt[,-8]); model2
+summary(model2)
+```
+Adjusted R-squared has increased marginally, so our decision to remove Distance variable was correct.
+Still the p-values of Size and Date variables are high. 
+Now let's remove size and run a model.
+```{r}
+model3 <- lm(Price~ County + Elevation + Sewer + Date + Flood, data = Salt); model3
+summary(model3)
+```
+The adjusted R-squared decreased slighty which is acceptable. Now, all the independant variabes are significant in the model.
+
+```{r}
+vif(model3)
+```
+
+```{r}
+plot(model3)
+```
+
